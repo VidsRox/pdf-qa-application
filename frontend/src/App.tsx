@@ -2,32 +2,36 @@ import React, { useState } from "react";
 import axios from "axios";
 
 const App: React.FC = () => {
-  // State variables to manage file, filename, user question, and answer
-  const [file, setFile] = useState<File | null>(null); // Stores the uploaded file
-  const [filename, setFilename] = useState(""); // Stores the filename returned by the server
-  const [question, setQuestion] = useState(""); // Stores the user's input question
-  const [answer, setAnswer] = useState(""); // Stores the answer from the backend
+  // State variables
+  const [file, setFile] = useState<File | null>(null); // For file uploads
+  const [filename, setFilename] = useState(""); // Filename returned by the server
+  const [tags, setTags] = useState(""); // Tags for organization
+  const [category, setCategory] = useState(""); // Category for organization
+  const [searchQuery, setSearchQuery] = useState(""); // Search query
+  const [searchResults, setSearchResults] = useState<any[]>([]); // Search results
+  const [startDate, setStartDate] = useState(""); // Start date for search
+  const [endDate, setEndDate] = useState(""); // End date for search
+  const [question, setQuestion] = useState(""); // User's input question
+  const [answer, setAnswer] = useState(""); // Answer returned by the backend
 
-  // Function to handle file upload
+  // File upload handler
   const handleFileUpload = async () => {
-    // Check if a file is selected
     if (!file) {
       alert("Please select a file.");
       return;
     }
 
-    // Prepare the form data with the uploaded file
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("tags", tags); // Include tags
+    formData.append("category", category); // Include category
 
     try {
-      // Send POST request to the backend to upload the file
       const response = await axios.post("http://localhost:8000/upload/", formData, {
         headers: {
-          "Content-Type": "multipart/form-data", // Ensures proper handling of file uploads
+          "Content-Type": "multipart/form-data",
         },
       });
-      // Store the filename returned by the server
       setFilename(response.data.filename);
       alert("File uploaded successfully!");
     } catch (error) {
@@ -36,23 +40,19 @@ const App: React.FC = () => {
     }
   };
 
-  // Function to handle question submission
+  // Question submission handler
   const handleAskQuestion = async () => {
-    // Ensure a file has been uploaded
     if (!filename) {
       alert("Please upload a file first.");
       return;
     }
 
-    // Prepare form data with the filename and question
     const formData = new FormData();
     formData.append("filename", filename);
     formData.append("question", question);
 
     try {
-      // Send POST request to the backend with the question
       const response = await axios.post("http://localhost:8000/ask/", formData);
-      // Store the answer returned by the backend
       setAnswer(response.data.answer);
     } catch (error) {
       console.error("Error while asking question:", error);
@@ -60,9 +60,39 @@ const App: React.FC = () => {
     }
   };
 
+  // File search handler
+  const handleSearchFiles = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/search/", {
+        params: {
+          query: searchQuery,
+          start_date: startDate,
+          end_date: endDate,
+          category: category,
+        },
+      });
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error("Search failed:", error);
+      alert("Search failed!");
+    }
+  };
+
+  // File delete handler
+  const handleDeleteFile = async (fileId: number) => {
+    try {
+      await axios.delete(`http://localhost:8000/delete/${fileId}/`);
+      alert("File deleted successfully!");
+      // Refresh search results
+      handleSearchFiles();
+    } catch (error) {
+      console.error("Error while deleting file:", error);
+      alert("Error while deleting file!");
+    }
+  };
+
   return (
     <div style={styles.container}>
-      {/* Header Section */}
       <header style={styles.header}>
         <h1 style={styles.title}>PDF Q&A Application</h1>
       </header>
@@ -71,25 +101,86 @@ const App: React.FC = () => {
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>Upload PDF</h2>
         <div style={styles.inputContainer}>
-          {/* Input for selecting a PDF file */}
           <input
             type="file"
             accept="application/pdf"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             style={styles.fileInput}
           />
-          {/* Button to upload the selected file */}
+          <input
+            type="text"
+            placeholder="Enter tags (comma-separated)"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            style={styles.textInput}
+          />
+          <input
+            type="text"
+            placeholder="Enter category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={styles.textInput}
+          />
           <button onClick={handleFileUpload} style={styles.button}>
             Upload
           </button>
         </div>
       </div>
 
+      {/* Search Section */}
+      <div style={styles.section}>
+        <h2 style={styles.sectionTitle}>Search Files</h2>
+        <div style={styles.inputContainer}>
+          <input
+            type="text"
+            placeholder="Search by name or tags"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={styles.textInput}
+          />
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            style={styles.textInput}
+          />
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            style={styles.textInput}
+          />
+          <input
+            type="text"
+            placeholder="Enter category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={styles.textInput}
+          />
+          <button onClick={handleSearchFiles} style={styles.button}>
+            Search
+          </button>
+        </div>
+        {/* Display search results */}
+        <ul style={styles.fileList}>
+          {searchResults.map((file) => (
+            <li key={file.id} style={styles.fileItem}>
+              <strong>{file.filename}</strong> - Tags: {file.tags || "None"} - Category: {file.category || "None"}
+              <button
+                onClick={() => handleDeleteFile(file.id)}
+                style={styles.deleteButton}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {/* Question Submission Section */}
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>Ask a Question</h2>
         <div style={styles.inputContainer}>
-          {/* Input for typing a question */}
           <input
             type="text"
             placeholder="Enter your question"
@@ -97,7 +188,6 @@ const App: React.FC = () => {
             onChange={(e) => setQuestion(e.target.value)}
             style={styles.textInput}
           />
-          {/* Button to submit the question */}
           <button onClick={handleAskQuestion} style={styles.button}>
             Ask
           </button>
@@ -120,7 +210,7 @@ const styles = {
   container: {
     fontFamily: "Arial, sans-serif",
     padding: "20px",
-    maxWidth: "600px",
+    maxWidth: "800px",
     margin: "0 auto",
     backgroundColor: "#f9f9f9",
     borderRadius: "10px",
@@ -146,19 +236,20 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-  },
-  fileInput: {
-    flex: 1,
-    padding: "8px",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
-    fontSize: "14px",
+    flexWrap: "wrap" as const,
   },
   textInput: {
     flex: 1,
     padding: "8px",
-    border: "1px solid #ccc",
     borderRadius: "5px",
+    border: "1px solid #ccc",
+    fontSize: "14px",
+  },
+  fileInput: {
+    flex: 1,
+    padding: "8px",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
     fontSize: "14px",
   },
   button: {
@@ -170,7 +261,28 @@ const styles = {
     cursor: "pointer",
     fontSize: "14px",
     fontWeight: "bold" as const,
-    transition: "background-color 0.3s",
+  },
+  deleteButton: {
+    marginLeft: "10px",
+    backgroundColor: "#FF4D4D",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    padding: "5px 10px",
+    cursor: "pointer",
+  },
+  fileList: {
+    listStyleType: "none",
+    padding: "0",
+  },
+  fileItem: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px",
+    backgroundColor: "#f1f1f1",
+    borderRadius: "5px",
+    marginBottom: "10px",
   },
   answerSection: {
     marginTop: "20px",
