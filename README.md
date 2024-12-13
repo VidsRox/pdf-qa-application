@@ -53,6 +53,11 @@ A simple web application that allows users to:
 2. **Ask a Question**: Type a question related to the uploaded PDF.
 3. **View Answer**: Get the AI-generated answer displayed on the screen.
 
+ ## Demo
+
+[Watch the Demo Video](./video2719063964.mp4)
+
+
 ## Future Improvements
 
 - Support for additional document types.
