@@ -55,7 +55,7 @@ A simple web application that allows users to:
 
  ## Demo
 
-[Watch the Demo Video](./media/demo.mp4)
+[Watch the Demo Video](./video2719063964.mp4)
 
 
 ## Future Improvements
